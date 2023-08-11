@@ -27,11 +27,15 @@ sum(comm)
 N <- rowSums(comm)
 S <- rowSums(comm > 0)
 
-par(mfrow=c(2,2))
+par(mfrow=c(1,2))
 hist(N)
 hist(S)
-boxplot(N ~ hab)
-boxplot(S ~ hab)
+
+pdf('./figs/N_&_S_habitats_rep_scale.pdf', width = 7*1.5)
+par(mfrow=c(1,2))
+boxplot(N ~ hab, ylab = '# of individuals')
+boxplot(S ~ hab, ylab = '# of taxonomic orders')
+dev.off()
 
 # test if means different at the replicate scale
 t.test(N ~ hab)
