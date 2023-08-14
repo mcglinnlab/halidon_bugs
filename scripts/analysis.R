@@ -1,12 +1,29 @@
 library(mobr)
 library(vegan)
 
+#' read in data
 dat <- read.csv('./data/Sweep_Species_r - Sheet1.csv')
 
 head(dat)
 
+# orders
+dat$order[1:13]
+uni_orders <- c('Hymenoptera', 'Orthoptera', 
+                'Coleoptera', 'Areinada',
+                'Lepidoptera', 'Dipteran',
+                'Odonata', 'Mantodea',
+                'Phasmotodea', 'Hemiptera',
+                'Araneae', 'Oppliones',
+                'unknown')
+com_orders <- c('wasps', 'grasshoppers',
+                'beetles','mites',
+                'moths/butterflys','flys',
+                'dragonflys', 'matids',
+                'stickbugs','bugs',
+                'spiders','harvestmen')
 
-# drop all samples where replicate is not known
+
+#' drop all samples where replicate is not known
 dat <- subset(dat, !is.na(dat$rep))
 
 dat$samp_id <- with(dat, paste(site, rep, sep = '-'))
@@ -17,13 +34,14 @@ comm
 
 comm <- ifelse(is.na(comm), 0, comm)
 
-# drop samples with no individuals
+#' drop samples with no individuals
 comm <- subset(comm, rowSums(comm) > 0)
 
 hab <- ifelse(grepl('HH', rownames(comm)), 'wetland', 'upland')
 
 sum(comm)
 
+#' compute abundances and richness at sweep net scale
 N <- rowSums(comm)
 S <- rowSums(comm > 0)
 
@@ -31,11 +49,48 @@ par(mfrow=c(1,2))
 hist(N)
 hist(S)
 
-pdf('./figs/N_&_S_habitats_rep_scale.pdf', width = 7*1.5)
+#pdf('./figs/N_&_S_habitats_rep_scale.pdf', width = 7*1.5)
 par(mfrow=c(1,2))
 boxplot(N ~ hab, ylab = '# of individuals')
 boxplot(S ~ hab, ylab = '# of taxonomic orders')
-dev.off()
+#dev.off()
+
+n_avg <- tapply(N, hab, mean, na.rm = TRUE)
+n_sd <- tapply(N, hab, sd, na.rm = TRUE)
+n_n <- length(N)
+n_se <- n_sd / sqrt(n_n)
+
+s_avg <- tapply(S, hab, mean, na.rm = TRUE)
+s_sd <- tapply(S, hab, sd, na.rm = TRUE)
+s_n <- length(S)
+s_se <- s_sd / sqrt(s_n)
+
+
+s_ord_avg <- apply(comm, 2, function(x) tapply(x, hab, mean))
+s_ord_sd <- apply(comm, 2, function(x) tapply(x, hab, sd))
+s_ord_n <- nrow(comm)
+s_ord_se <- s_ord_sd / sqrt(s_ord_n)
+
+
+#pdf('./figs/n_s_orders.pdf', width = 7*2)
+par(mfrow=c(1,3))
+n_plt <- barplot(n_avg, width = 0.25, ylim = c(0, 80), 
+                  ylab = 'Number of Individuals', 
+                 col = c('lightgreen', 'lightblue'))
+arrows(n_plt, n_avg - (n_se * 1.96), y1 = n_avg + (n_se * 1.96),
+       angle = 90, code = 3, length = 0.1)
+s_plt <- barplot(s_avg, width = 0.25, ylim = c(0, 10), 
+                 ylab = 'Number of Taxonomic Orders', 
+                 col = c('lightgreen', 'lightblue'))
+arrows(s_plt, s_avg - (s_se * 1.96), y1 = s_avg + (s_se * 1.96),
+       angle = 90, code = 3, length = 0.1)
+s_ord_plt <- barplot(s_ord_avg, beside = TRUE, ylim = c(0, 25),
+                     ylab = 'Number of Individuals',
+                     col = c('lightgreen', 'lightblue'))
+arrows(s_ord_plt, s_ord_avg - (s_ord_se * 1.96), y1 = s_ord_avg + (s_ord_se * 1.96),
+       angle = 90, code = 3, length = 0.01)
+#dev.off()
+
 
 # test if means different at the replicate scale
 t.test(N ~ hab)
